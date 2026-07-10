@@ -1,0 +1,29 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/htmlcov/
+backend/.coverage
+
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/test-results/
+frontend/playwright-report/
+
+# Datos locales (no versionar vectores ni logs)
+backend/data/chroma/
+backend/logs/
+backend/outputs/
+
+# Secretos
+.env
+*.env
+!.env.example
+*.pem
+*.key
+
+# SO
+Thumbs.db
+Desktop.ini

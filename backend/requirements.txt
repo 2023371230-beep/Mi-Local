@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+requests
+httpx
+chromadb
+pypdf
+python-docx
+pyyaml
+python-dotenv
+pytest
+pytest-cov
+rich
+loguru
