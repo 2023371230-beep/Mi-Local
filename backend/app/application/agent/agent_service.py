@@ -3,6 +3,7 @@ from __future__ import annotations
 import difflib
 import json
 import re
+import shutil
 import subprocess
 import threading
 import uuid
@@ -76,6 +77,48 @@ class AgentSession:
         stamp = datetime.now(timezone.utc).strftime("%H:%M:%S")
         self.events.append(f"[{stamp}] {message}")
         logger.info("agent[{}]: {}", self.session_id[:8], message)
+
+    # --------------------------------------------------- memoria por proyecto
+
+    @property
+    def memory_dir(self) -> Path:
+        return self.workspace / ".ai-local"
+
+    def log_action(self, action: str, **details: Any) -> None:
+        """Auditoria permanente en <workspace>/.ai-local/actions.log (JSONL)."""
+        try:
+            self.memory_dir.mkdir(parents=True, exist_ok=True)
+            record = {
+                "at": datetime.now(timezone.utc).isoformat(),
+                "session": self.session_id[:8],
+                "action": action,
+                **details,
+            }
+            with (self.memory_dir / "actions.log").open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+        except OSError as exc:
+            logger.warning("agent actions.log no escribible: {}", exc)
+
+    def backup_file(self, target: Path) -> Path | None:
+        """Copia fisica del archivo ANTES de modificarlo. Devuelve la ruta del backup."""
+        if not target.exists():
+            return None
+        backups = self.memory_dir / "backups"
+        backups.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        backup_path = backups / f"{stamp}_{target.name}"
+        backup_path.write_bytes(target.read_bytes())
+        return backup_path
+
+    def persist_state(self) -> None:
+        """Snapshot de la sesion en .ai-local/agent_state.json (sobrevive reinicios)."""
+        try:
+            self.memory_dir.mkdir(parents=True, exist_ok=True)
+            (self.memory_dir / "agent_state.json").write_text(
+                json.dumps(self.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+        except OSError as exc:
+            logger.warning("agent_state.json no escribible: {}", exc)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -153,6 +196,8 @@ class AgentService:
         steps = self._parse_plan(raw)
         session.steps = steps
         session.log_event(f"Plan propuesto con {len(steps)} pasos (pendiente de aprobacion)")
+        session.log_action("plan", goal=goal, steps=len(steps))
+        session.persist_state()
         return session
 
     def _parse_plan(self, raw: str) -> list[AgentStep]:
@@ -253,14 +298,28 @@ class AgentService:
             if step.status != "proposed" or step.proposed_content is None:
                 raise SafetyViolation("El paso no tiene un diff propuesto que aprobar.")
             target = self.policy.validate_write(session.workspace, step.path or "")
+            backup = session.backup_file(target)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(step.proposed_content, encoding="utf-8")
             step.status = "applied"
             session.log_event(f"Cambio aplicado en {step.path} con aprobacion del usuario")
+            session.log_action(
+                "apply_edit",
+                path=step.path,
+                backup=str(backup) if backup else None,
+                description=step.description,
+            )
         elif step.kind == "command":
             self._run_command(session, step)
+            session.log_action(
+                "run_command",
+                command=step.command,
+                status=step.status,
+                error=step.error,
+            )
         else:
             raise ValueError(f"Tipo de paso desconocido: {step.kind}")
+        session.persist_state()
         return session
 
     def reject_step(self, session_id: str, step_index: int) -> AgentSession:
@@ -268,6 +327,8 @@ class AgentService:
         step = self._get_step(session, step_index)
         step.status = "rejected"
         session.log_event(f"Paso {step_index} rechazado por el usuario")
+        session.log_action("reject", index=step_index)
+        session.persist_state()
         return session
 
     def revert_step(self, session_id: str, step_index: int) -> AgentSession:
@@ -280,16 +341,24 @@ class AgentService:
         target.write_text(step.original_content, encoding="utf-8")
         step.status = "proposed"
         session.log_event(f"Cambio revertido en {step.path}")
+        session.log_action("revert", path=step.path)
+        session.persist_state()
         return session
 
     # -------------------------------------------------------------- comandos
 
     def _run_command(self, session: AgentSession, step: AgentStep) -> None:
         tokens = self.policy.validate_command(step.command or "")
+        # En Windows npm/npx son .cmd; shell=False no los resuelve sin which.
+        executable = shutil.which(tokens[0])
+        if executable is None:
+            step.status = "failed"
+            step.error = f"Ejecutable no encontrado en PATH: {tokens[0]}"
+            return
         session.log_event(f"Ejecutando comando aprobado: {' '.join(tokens)}")
         try:
             result = subprocess.run(
-                tokens,
+                [executable, *tokens[1:]],
                 cwd=session.workspace,
                 capture_output=True,
                 text=True,

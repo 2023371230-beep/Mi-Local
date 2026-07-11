@@ -106,48 +106,4 @@ class HealthResponse(BaseModel):
 
 
 class ModelsResponse(BaseModel):
-    models: list[dict[str, Any]]
-
-
-class ErrorResponse(BaseModel):
-    error: str
-    detail: str | None = None
-
-
-class AgentSessionRequest(BaseModel):
-    workspace_path: str = Field(min_length=1)
-
-
-class AgentPlanRequest(BaseModel):
-    goal: str = Field(min_length=1)
-
-
-class AgentApplyRequest(BaseModel):
-    approved: bool = False
-
-
-class AgentStepModel(BaseModel):
-    index: int
-    kind: str
-    description: str
-    path: str | None = None
-    command: str | None = None
-    status: str
-    diff: str | None = None
-    output: str | None = None
-    error: str | None = None
-
-
-class AgentSessionResponse(BaseModel):
-    session_id: str
-    workspace: str
-    tree: list[str]
-    goal: str | None = None
-    steps: list[AgentStepModel] = Field(default_factory=list)
-    created_at: str
-    events: list[str] = Field(default_factory=list)
-
-
-class AgentFileResponse(BaseModel):
-    path: str
-    content: str
+    

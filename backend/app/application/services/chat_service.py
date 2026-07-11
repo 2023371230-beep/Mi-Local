@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import time
+from typing import Any, Iterator
 
 from loguru import logger
+
+from app.application.skills.base_skill import BaseSkill
 
 from app.application.router.query_router import QueryRouter
 from app.application.skills.skill_bases_datos import BasesDatosSkill
@@ -62,17 +65,15 @@ class ChatService:
             latency_ms=latency_ms,
         )
 
-    def _build_skill(self, skill_name: str, model_name: str, collection: str):
-        if skill_name == "skill_programacion":
-            return ProgramacionSkill(self.llm_client, model_name=model_name)
-        if skill_name == "skill_ui_ux":
-            return UiUxSkill(self.llm_client, model_name=model_name)
-        if skill_name == "skill_ciberseguridad":
-            return CiberseguridadSkill(self.llm_client, model_name=model_name)
-        if skill_name == "skill_bases_datos":
-            return BasesDatosSkill(self.llm_client, model_name=model_name)
-        if skill_name == "skill_rag_local":
-            return RagLocalSkill(self.rag_service, default_collection=collection)
-        if skill_name == "skill_web_search":
-            return WebSearchSkill(self.web_search_service, model_name=model_name)
-        return ChatGeneralSkill(self.llm_client, model_name=model_name)
+    def chat_stream(self, request: ChatRequest) -> Iterator[dict[str, Any]]:
+        """Version streaming: eventos meta -> delta* -> (sources) -> done.
+
+        Las skills directas (LLM puro) streamean token a token; RAG y web hacen su
+        pipeline completo y emiten la respuesta al final (sus fuentes no existen
+        hasta terminar el retrieval/busqueda).
+        """
+        started = time.perf_counter()
+        decision = self.router.route(request)
+        effective_request = request.model_copy(update={"collection": request.collection or decision.collection})
+        model_name = request.model or decision.model_name
+        skill = self._build_skill(decision.skill_name, model_name, decision.collection 

@@ -32,9 +32,17 @@ def health(settings: Settings = Depends(get_app_settings)) -> HealthResponse:
         web_status = "degraded"
     else:
         web_status = "error"
+    ollama_ok = check_http_health(f"{settings.ollama_base_url}/api/tags")
+    # ok: nucleo completo; degraded: nucleo bien pero web con problemas; error: sin ollama/chroma
+    if ollama_ok and chroma_ok and web_status == "ok":
+        overall = "ok"
+    elif ollama_ok and chroma_ok:
+        overall = "degraded"
+    else:
+        overall = "error"
     return HealthResponse(
-        status="ok",
-        ollama=check_http_health(f"{settings.ollama_base_url}/api/tags"),
+        status=overall,
+        ollama=ollama_ok,
         chroma=chroma_ok,
         perplexica=vane_ok,
         vane=vane_ok,
@@ -44,12 +52,4 @@ def health(settings: Settings = Depends(get_app_settings)) -> HealthResponse:
             "engine": "vane",
             "primary": "vane",
             "url": settings.perplexica_url,
-            "providers_endpoint": providers_endpoint,
-            "search_endpoint": searxng_endpoint,
-            "fallback": "searxng",
-            "fallback_engine": "searxng",
-            "fallback_url": settings.searxng_url,
-            "fallback_available": searxng_endpoint,
-            "last_error": last_error,
-        },
-    )
+            "providers_endpoint":

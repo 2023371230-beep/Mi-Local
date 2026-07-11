@@ -176,3 +176,37 @@ def test_agent_tree_excludes_hidden_and_deps(tmp_path: Path):
     session = service.create_session(str(workspace))
     assert "src/app.py" in session.tree
     assert all("node_modules" not in item for item in session.tree)
+
+
+def test_agent_apply_creates_backup_and_audit_log(tmp_path: Path):
+    """Cada apply deja backup fisico y linea en actions.log (.ai-local)."""
+    plan = '[{"kind": "edit", "path": "main.py", "description": "Editar main"}]'
+    proposal = "```python\ncambiado = True\n```"
+    service, workspace = make_service(tmp_path, [plan, proposal])
+    (workspace / "main.py").write_text("original = True\n", encoding="utf-8")
+    session = service.create_session(str(workspace))
+    service.propose_plan(session.session_id, "editar main.py")
+    service.propose_edit(session.session_id, 0)
+    service.apply_step(session.session_id, 0, approved=True)
+
+    memory = workspace / ".ai-local"
+    backups = list((memory / "backups").iterdir())
+    assert len(backups) == 1
+    assert backups[0].read_text(encoding="utf-8") == "original = True\n"
+
+    log_lines = (memory / "actions.log").read_text(encoding="utf-8").strip().splitlines()
+    actions = [__import__("json").loads(line)["action"] for line in log_lines]
+    assert "plan" in actions and "apply_edit" in actions
+
+    state = __import__("json").loads((memory / "agent_state.json").read_text(encoding="utf-8"))
+    assert state["steps"][0]["status"] == "applied"
+
+
+def test_agent_tree_excludes_ai_local(tmp_path: Path):
+    service, workspace = make_service(tmp_path, [])
+    (workspace / ".ai-local" / "backups").mkdir(parents=True)
+    (workspace / ".ai-local" / "actions.log").write_text("x", encoding="utf-8")
+    (workspace / "app.py").write_text("x", encoding="utf-8")
+    session = service.create_session(str(workspace))
+    assert "app.py" in session.tree
+    assert all(".ai-local" not in item for item in session.tree)

@@ -82,54 +82,52 @@ class IngestionService:
         return IngestionStats(files_processed, chunks_created, duplicates_skipped, errors)
 
     def _ingest_file(self, file: Path, collection: str, topic: str) -> tuple[int, int]:
-        ids: list[str] = []
-        documents: list[str] = []
-        embeddings: list[list[float]] = []
-        metadatas: list[dict[str, Any]] = []
         now = datetime.now(timezone.utc).isoformat()
 
+        # 1) Trocear y calcular hashes SIN embeber todavia.
+        pending: list[tuple[str, str, dict[str, Any]]] = []  # (id, chunk, metadata)
         for page_number, text in self._iter_pages(file):
             for chunk_index, chunk in enumerate(self.splitter.split(text)):
                 chunk_hash = hashlib.sha256(chunk.encode("utf-8")).hexdigest()
-                ids.append(f"{collection}:{chunk_hash}")
-                documents.append(chunk)
-                embeddings.append(self.llm_client.embed(self.settings.ollama_embed_model, chunk))
-                metadatas.append(
-                    {
-                        "source": file.name,
-                        "path": str(file),
-                        "filename": file.name,
-                        "topic": topic,
-                        "collection": collection,
-                        "page": page_number,
-                        "chunk_index": chunk_index,
-                        "hash": chunk_hash,
-                        "ingested_at": now,
-                    }
+                pending.append(
+                    (
+                        f"{collection}:{chunk_hash}",
+                        chunk,
+                        {
+                            "source": file.name,
+                            "path": str(file),
+                            "filename": file.name,
+                            "topic": topic,
+                            "collection": collection,
+                            "page": page_number,
+                            "chunk_index": chunk_index,
+                            "hash": chunk_hash,
+                            "ingested_at": now,
+                        },
+                    )
                 )
+        if not pending:
+            return 0, 0
 
+        # 2) Filtrar duplicados ANTES de embeber: re-ingestar un archivo ya indexado
+        #    no debe pagar el costo de embeddings otra vez.
+        all_ids = [item[0] for item in pending]
+        existing_ids = self.vector_client.existing_ids(collection, all_ids)
+        new_items = [item for item in pending if item[0] not in existing_ids]
+        duplicates = len(pending) - len(new_items)
+        if not new_items:
+            return 0, duplicates
+
+        # 3) Embeber solo lo nuevo e insertar.
+        ids = [item[0] for item in new_items]
+        documents = [item[1] for item in new_items]
+        metadatas = [item[2] for item in new_items]
+        embeddings = [
+            self.llm_client.embed(self.settings.ollama_embed_model, chunk) for chunk in documents
+        ]
         inserted = self.vector_client.add_documents(collection, ids, documents, embeddings, metadatas)
-        return inserted, max(0, len(ids) - inserted)
+        return inserted, duplicates + max(0, len(ids) - inserted)
 
     def _iter_pages(self, file: Path):
         """Genera (numero_pagina, texto) para PDF, Markdown o texto plano."""
-        if file.suffix.lower() == ".pdf":
-            for page in self.pdf_parser.extract_pages(file):
-                yield page.page, page.text
-            return
-        text = file.read_text(encoding="utf-8", errors="replace")
-        yield 1, text
-
-    def _infer_collection(self, file: Path, root: Path) -> str:
-        try:
-            relative = file.relative_to(root)
-            key = relative.parts[0].lower()
-        except ValueError:
-            key = file.parent.name.lower()
-        return TOPIC_COLLECTION_MAP.get(key, self._sanitize_collection(key))
-
-    def _sanitize_collection(self, value: str) -> str:
-        safe = "".join(char.lower() if char.isalnum() else "_" for char in value)
-        while "__" in safe:
-            safe = safe.replace("__", "_")
-        return safe.strip("_") or "general"
+  

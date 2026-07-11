@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -13,7 +14,16 @@ class SafetyViolation(Exception):
 _SHELL_METACHARACTERS = ("&", "|", ";", ">", "<", "`", "$", "(", ")", "\n", "\r")
 
 # Directorios que el agente nunca lista ni toca.
-_EXCLUDED_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".next", "dist", "build", ".pytest_cache", "chroma"}
+_EXCLUDED_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".next", "dist", "build", ".pytest_cache", "chroma", ".ai-local"}
+
+# Archivos con secretos: el agente no puede leerlos NI escribirlos, aunque le den la ruta exacta.
+_SECRET_PATTERNS = (
+    re.compile(r"^\.env(?!\.example$)(\..+)?$", re.IGNORECASE),
+    re.compile(r".*\.(pem|key|pfx|p12|crt|der)$", re.IGNORECASE),
+    re.compile(r"^id_(rsa|dsa|ecdsa|ed25519)(\.pub)?$", re.IGNORECASE),
+    re.compile(r"^(credentials|secrets?)(\..+)?$", re.IGNORECASE),
+    re.compile(r".*secret.*\.(json|yaml|yml|toml)$", re.IGNORECASE),
+)
 
 # Extensiones consideradas texto editable. Todo lo demas es solo lectura-denegada.
 _EDITABLE_SUFFIXES = {
@@ -73,6 +83,8 @@ class SafetyPolicy:
         for part in candidate.relative_to(workspace).parts:
             if part in self.excluded_dirs:
                 raise SafetyViolation(f"Directorio excluido por politica: {part}")
+        if any(pattern.match(candidate.name) for pattern in _SECRET_PATTERNS):
+            raise SafetyViolation(f"Archivo de secretos bloqueado por politica: {candidate.name}")
         return candidate
 
     def validate_read(self, workspace: Path, relative: str) -> Path:

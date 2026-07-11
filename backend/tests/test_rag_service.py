@@ -19,4 +19,4 @@ def test_text_splitter_rejects_invalid_overlap():
     except ValueError as exc:
         assert "overlap" in str(exc)
     else:
-        raise AssertionError("Expected ValueError")
+        raise AssertionError("E

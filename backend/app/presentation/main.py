@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.infrastructure.logging.logger import setup_logging
-from app.presentation.endpoints import agent, chat, health, ingest, logs, models, rag, web_search
+from app.presentation.endpoints import agent, chat, documents, health, ingest, logs, models, rag, web_search
 
 
 def create_app() -> FastAPI:
@@ -36,15 +36,9 @@ def create_app() -> FastAPI:
     app.include_router(web_search.router)
     app.include_router(logs.router)
     app.include_router(agent.router)
+    app.include_router(documents.router)
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(_, exc: Exception) -> JSONResponse:
         return JSONResponse(
-            status_code=500,
-            content={"error": "internal_server_error", "detail": str(exc)},
-        )
-
-    return app
-
-
-app = create_app()
+            s

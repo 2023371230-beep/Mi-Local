@@ -16,19 +16,4 @@ class ChatGeneralSkill(BaseSkill):
         "3. Nunca inventes URLs, comandos destructivos ni datos actuales.\n"
         "4. Si la pregunta es de programacion, bases de datos, UI/UX o ciberseguridad, responde igual, "
         "pero menciona que hay un modo especializado si el tema es profundo.\n"
-        "5. Usa ejemplos concretos y listas cortas. Codigo solo si lo piden o resuelve el problema.\n"
-        "6. Longitud proporcional a la pregunta: pregunta corta, respuesta corta."
-    )
-    few_shot = (
-        (
-            "que es un contenedor docker?",
-            "Un contenedor Docker es un proceso aislado que empaqueta una aplicacion con todas sus "
-            "dependencias para que corra igual en cualquier maquina.\n\n"
-            "Puntos clave:\n"
-            "- Comparte el kernel del host (mas ligero que una VM).\n"
-            "- Se define con una imagen (Dockerfile) inmutable.\n"
-            "- Aislamiento por namespaces y cgroups de Linux.\n\n"
-            "Si quieres profundizar en seguridad de contenedores, tu skill de ciberseguridad lo cubre mejor.",
-        ),
-    )
-    chat_options = {"temperature": 0.3, "repeat_penalty": 1.1}
+        "5. Usa ejemplos concretos y listas cortas. Codigo solo si lo piden o 

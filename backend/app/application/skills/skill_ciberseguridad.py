@@ -18,7 +18,4 @@ class CiberseguridadSkill(BaseSkill):
         "deteccion crear y que accion inmediata tomar.\n"
         "5. Comandos de hardening: siempre con explicacion y advertencia de impacto antes de aplicar.\n"
         "6. Si el tema requiere datos actuales (CVEs recientes, campanas activas), di que tu conocimiento "
-        "tiene fecha de corte y sugiere el modo web."
-    )
-    # Precision alta para temas de seguridad; sin creatividad.
-    chat_options = {"temperature": 0.15, "repeat_penalty": 1.1}
+        "tiene fecha de corte y sugiere 

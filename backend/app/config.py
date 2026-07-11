@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     ollama_router_model: str = Field(default="llama3.2:latest", alias="OLLAMA_ROUTER_MODEL")
     ollama_embed_model: str = Field(default="qwen3-embedding:0.6b", alias="OLLAMA_EMBED_MODEL")
     ollama_timeout: float = Field(default=120.0, alias="OLLAMA_TIMEOUT")
+    # Distancia maxima (L2^2 de Chroma) para aceptar un chunk como relevante (bge-m3).
+    rag_max_distance: float = Field(default=1.03, alias="RAG_MAX_DISTANCE")
     rag_source_path: Path = Field(default=Path(r"C:\Users\angel\Modelo local\RAG"), alias="RAG_SOURCE_PATH")
     chroma_path: Path = Field(
         default=BACKEND_ROOT / "data" / "chroma",
@@ -42,19 +44,4 @@ class Settings(BaseSettings):
     vane_default_sources: str = Field(default="web", alias="VANE_DEFAULT_SOURCES")
     vane_search_timeout: float = Field(default=60.0, alias="VANE_SEARCH_TIMEOUT")
     web_search_fallback: str = Field(default="searxng", alias="WEB_SEARCH_FALLBACK")
-    agent_workspace_base: str = Field(default=r"C:\Users\angel", alias="AGENT_WORKSPACE_BASE")
-    agent_max_plan_steps: int = Field(default=8, alias="AGENT_MAX_PLAN_STEPS")
-    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
-
-    model_config = SettingsConfigDict(
-        env_file=str(ENV_FILE),
-        env_file_encoding="utf-8",
-        populate_by_name=True,
-        extra="ignore",
-    )
-
-
-@lru_cache
-def get_settings() -> Settings:
-    defaults = _load_yaml_defaults()
-    return Settings(**defaults)
+    agent_workspace_base: str = Field(default=r"C:\Users\angel

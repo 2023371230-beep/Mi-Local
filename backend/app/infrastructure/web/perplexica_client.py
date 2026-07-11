@@ -149,11 +149,18 @@ class PerplexicaClient:
         }
 
     def _post_search(self, payload: dict[str, Any], timeout: float) -> dict[str, Any]:
-        """Consume el stream NDJSON de /api/search y ensambla la respuesta."""
+        """Consume el stream NDJSON de /api/search y ensambla la respuesta.
+
+        Vane emite 'sources' ANTES del primer token de respuesta. Si llega un
+        'response' sin sources previos, su SearXNG interno dio 0 resultados y la
+        respuesta seria alucinada: se aborta ahi mismo para saltar al fallback
+        sin esperar 1-2 minutos de generacion inutil.
+        """
         request_timeout = httpx.Timeout(timeout, connect=min(10.0, timeout))
         answer_parts: list[str] = []
         sources: list[dict[str, Any]] = []
         stream_error: str | None = None
+        aborted_no_sources = False
         with httpx.stream(
             "POST", f"{self.base_url}/api/search", json=payload, timeout=request_timeout
         ) as response:
@@ -170,6 +177,9 @@ class PerplexicaClient:
                     continue
                 event_type = event.get("type")
                 if event_type == "response":
+                    if not sources and not answer_parts:
+                        aborted_no_sources = True
+                        break
                     answer_parts.append(str(event.get("data") or ""))
                 elif event_type == "sources":
                     data = event.get("data")
@@ -180,6 +190,8 @@ class PerplexicaClient:
                     break
                 elif event_type in ("done", "end"):
                     break
+        if aborted_no_sources:
+            return {"message": "", "sources": [], "error": None, "no_sources": True}
         result: dict[str, Any] = {"message": "".join(answer_parts), "sources": sources}
         if stream_error:
             result["error"] = stream_error
@@ -225,60 +237,4 @@ class PerplexicaClient:
             embedding_model,
             effective_timeout,
         )
-        started = time.perf_counter()
-        try:
-            data = self._post_search(payload, effective_timeout)
-        except httpx.TimeoutException:
-            return self._error(f"Vane search timed out after {effective_timeout} seconds.")
-        except httpx.HTTPError as exc:
-            return self._error(f"Vane search failed: {exc}")
-        if data.get("error"):
-            return self._error(f"Vane search failed: {data['error']}")
-
-        elapsed = time.perf_counter() - started
-        logger.info("Vane search ok in {:.1f}s", elapsed)
-        PerplexicaClient.last_error = None
-        return self.normalize_response(data, provider)
-
-    def normalize_response(self, data: dict[str, Any], provider: dict[str, Any] | None = None) -> dict[str, Any]:
-        provider = provider or {}
-        return {
-            "answer": data.get("message") or data.get("answer") or "",
-            "sources": self._normalize_sources(data.get("sources", [])),
-            "provider": provider.get("name", "ollama"),
-            "engine": "vane",
-            "error": None,
-            "raw": data,
-        }
-
-    # ----------------------------------------------------------------- helpers
-
-    def _normalize_sources(self, sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        normalized = []
-        for source in sources or []:
-            metadata = source.get("metadata", {}) or {}
-            normalized.append(
-                {
-                    "source": "perplexica",
-                    "title": metadata.get("title") or "",
-                    "url": metadata.get("url"),
-                    "content": source.get("content") or "",
-                }
-            )
-        return normalized
-
-    def _model_keys(self, models: list[dict[str, Any]]) -> list[str]:
-        return [model.get("key") for model in models or [] if model.get("key")]
-
-    def _pick_model(self, models: list[dict[str, Any]], preferred: list[str]) -> str | None:
-        keys = self._model_keys(models)
-        for item in preferred:
-            for key in keys:
-                if item == key or item in key:
-                    return key
-        return keys[0] if keys else None
-
-    def _error(self, message: str) -> dict[str, Any]:
-        PerplexicaClient.last_error = message
-        logger.warning(message)
-        return {"answer": "", "sources": [], "provider": "ollama", "engine": "vane", "error": message, "raw": {}}
+        started = time.perf

@@ -19,6 +19,9 @@ class FakeVectorClient:
         self.calls.append({"collection": collection, "ids": ids, "documents": documents, "metadatas": metadatas})
         return len(ids)
 
+    def existing_ids(self, collection, ids):
+        return set()
+
 
 def test_ingest_markdown_file(tmp_path: Path):
     root = tmp_path / "RAG"
@@ -64,6 +67,4 @@ def test_ingest_infers_collection_from_folder(tmp_path: Path):
     stats = service.ingest(target_path=str(sub))
 
     assert stats.files_processed == 1
-    assert not stats.errors
-    # la coleccion se infiere del nombre de la carpeta contenedora
-    assert vector.calls[0]["collection"] == "asistente"
+    assert not 

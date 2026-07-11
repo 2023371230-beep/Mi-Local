@@ -1,28 +1,13 @@
 ollama_base_url: "http://localhost:11434"
 ollama_general_model: "qwen2.5:7b"
 ollama_coder_model: "qwen2.5-coder:7b"
+# OJO: hoy el router es 100% regex (routing_rules.py); este modelo queda reservado
+# para el futuro router LLM de segunda pasada (fase F6 de la auditoria).
 ollama_router_model: "llama3.2:latest"
 # bge-m3 para TODO (RAG y Vane): un solo modelo de embeddings residente evita
 # que Ollama desaloje modelos en cada cambio RAG<->busqueda web (16 GB RAM).
 ollama_embed_model: "bge-m3"
 # En CPU un prompt largo (RAG con contexto) tarda 1-3 min en prompt eval; 120s cortaba.
 ollama_timeout: 300
-rag_source_path: "C:\\Users\\angel\\Modelo local\\RAG"
-chroma_path: "C:\\Users\\angel\\Modelo local\\modelo-ia-carrera\\backend\\data\\chroma"
-perplexica_url: "http://localhost:3000"
-searxng_url: "http://localhost:4000"
-# Modelos chicos para Vane: 16 GB de RAM no soportan 7b (5 GB) + qwen3-embedding
-# (2.3 GB) residentes a la vez; Ollama los intercambia y cada carga tarda 60-160s
-# bajo swapping, por eso las busquedas nunca terminaban.
-vane_chat_model: "llama3.2:latest"
-vane_embed_model: "bge-m3"
-vane_fallback_embed_model: "qwen3-embedding:0.6b"
-vane_optimization_mode: "speed"
-vane_default_sources: "web"
-# Con modelos chicos y calientes una busqueda tarda 20-60s; 180 cubre carga en frio.
-vane_search_timeout: 180
-web_search_fallback: "searxng"
-# Modo agente: todo con aprobacion explicita, nunca full-auto.
-agent_workspace_base: "C:\\Users\\angel"
-agent_max_plan_steps: 8
-log_level: "INFO"
+# Chunks con distancia mayor a esto se descartan (anti-alucinacion).
+# La metrica es L2 al cuadrado de Chroma (default) con bge-m3. Ca

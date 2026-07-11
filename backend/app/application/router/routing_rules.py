@@ -72,12 +72,17 @@ CYBER_PATTERNS = [
     r"nist",
     r"vulnerabilidad",
     r"hardening",
-    r"ataque",
-    r"defensa",
-    r"\blogs?\b",
+    r"\bataque\b",
+    r"\bmalware\b",
+    r"\bphishing\b",
     r"siem",
-    r"xss",
+    r"\bxss\b",
     r"sql injection",
+    r"pentest",
+    r"\bcifrad",
+    # "logs" solo enruta a ciber junto a contexto de seguridad, no cualquier log de app.
+    r"logs? de seguridad",
+    r"logs? sospechos",
 ]
 
 DATABASE_PATTERNS = [
@@ -94,9 +99,4 @@ DATABASE_PATTERNS = [
 
 def matches_any(message: str, patterns: list[str]) -> bool:
     normalized = _normalize(message)
-    return any(re.search(pattern, normalized, flags=re.IGNORECASE) for pattern in patterns)
-
-
-def _normalize(message: str) -> str:
-    replacements = str.maketrans("áéíóúüñÁÉÍÓÚÜÑ", "aeiouunAEIOUUN")
-    return message.translate(replacements).lower()
+    return any(re.search(pattern, normalized, flags=re.IGNORECASE) for patter

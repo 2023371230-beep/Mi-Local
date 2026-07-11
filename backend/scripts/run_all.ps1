@@ -10,6 +10,9 @@ Set-Location "$PSScriptRoot\.."
 docker info | Out-Null
 Invoke-RestMethod "http://localhost:11434/api/tags" -TimeoutSec 10 | Out-Null
 
+# Watchdog: si Ollama arranco sin GPU (pasa tras suspender la laptop), reiniciarlo.
+& .\scripts\check_gpu.ps1 -Fix
+
 & "..\perplexica\scripts\run_vane.ps1" -Port $VanePort -SearxngPort $SearxngPort
 
 $listener = Get-NetTCPConnection -LocalPort $BackendPort -State Listen -ErrorAction SilentlyContinue

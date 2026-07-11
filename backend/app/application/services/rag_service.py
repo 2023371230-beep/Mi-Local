@@ -20,8 +20,20 @@ class RagService:
 
     def answer(self, message: str, collection: str, top_k: int = 5) -> tuple[str, list[dict]]:
         results = self.query(message, collection, top_k)
-        if not results:
-            return "No encontre contexto local util en la coleccion indicada.", []
+        # Umbral anti-alucinacion: si nada es realmente parecido, decirlo en vez de
+        # pasarle ruido al modelo (que "responderia" citando chunks irrelevantes).
+        threshold = self.settings.rag_max_distance
+        relevant = [item for item in results if item.get("distance", 1.0) <= threshold]
+        if not relevant:
+            best = min((item.get("distance", 1.0) for item in results), default=None)
+            detail = f" (mejor distancia: {best:.2f}, umbral: {threshold})" if best is not None else ""
+            return (
+                "No encontre nada suficientemente relevante en tus documentos para esta pregunta"
+                + detail
+                + ". Prueba otra coleccion, reformula, o usa el modo web.",
+                [],
+            )
+        results = relevant
 
         context_blocks = []
         sources = []
@@ -36,21 +48,4 @@ class RagService:
                     "path": metadata.get("path"),
                     "filename": metadata.get("filename"),
                     "page": metadata.get("page"),
-                    "chunk_index": metadata.get("chunk_index"),
-                    "score": item.get("distance"),
-                }
-            )
-
-        prompt = (
-            "Responde usando solo el contexto local. Si el contexto no alcanza, dilo claramente.\n\n"
-            f"Pregunta: {message}\n\nContexto:\n" + "\n\n".join(context_blocks)
-        )
-        answer = self.llm_client.chat(
-            self.settings.ollama_general_model,
-            [
-                {"role": "system", "content": "Eres un asistente tecnico de RAG local. Cita filename, pagina y chunk cuando uses una fuente."},
-                {"role": "user", "content": prompt},
-            ],
-            options={"temperature": 0.1, "num_ctx": 4096},
-        )
-        return answer, sources
+                    "chunk_
