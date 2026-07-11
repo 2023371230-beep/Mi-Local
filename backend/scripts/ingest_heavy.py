@@ -121,10 +121,22 @@ def ingest_pdf_batched(
                 new_items = [item for item in pending if item[0] not in existing]
                 duplicates += len(pending) - len(new_items)
                 if new_items:
-                    embeddings = [
-                        service.llm_client.embed(service.settings.ollama_embed_model, item[1])
-                        for item in new_items
-                    ]
+                    # Lotes de 32 textos por peticion: amortiza HTTP y la cola de Ollama.
+                    embeddings: list[list[float]] = []
+                    embed_fn = getattr(service.llm_client, "embed_batch", None)
+                    if callable(embed_fn):
+                        for i in range(0, len(new_items), 32):
+                            embeddings.extend(
+                                embed_fn(
+                                    service.settings.ollama_embed_model,
+                                    [item[1] for item in new_items[i : i + 32]],
+                                )
+                            )
+                    else:
+                        embeddings = [
+                            service.llm_client.embed(service.settings.ollama_embed_model, item[1])
+                            for item in new_items
+                        ]
                     inserted = service.vector_client.add_documents(
                         collection,
                         [i[0] for i in new_items],

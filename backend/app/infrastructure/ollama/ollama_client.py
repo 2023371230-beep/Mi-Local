@@ -87,6 +87,23 @@ class OllamaClient(LLMClient):
         except httpx.HTTPError as exc:
             raise RuntimeError(f"Ollama chat stream failed for model {model}: {exc}") from exc
 
+    def embed_batch(self, model: str, texts: list[str]) -> list[list[float]]:
+        """Embebe varios textos en UNA peticion (amortiza HTTP/cola; clave en ingestas)."""
+        if not texts:
+            return []
+        payload = {"model": model, "input": texts, "keep_alive": _EMBED_KEEP_ALIVE}
+        try:
+            response = httpx.post(f"{self.base_url}/api/embed", json=payload, timeout=self.timeout)
+            response.raise_for_status()
+            embeddings = response.json().get("embeddings") or []
+            if len(embeddings) != len(texts):
+                raise RuntimeError(
+                    f"Ollama devolvio {len(embeddings)} embeddings para {len(texts)} textos"
+                )
+            return embeddings
+        except httpx.HTTPError as exc:
+            raise RuntimeError(f"Ollama batch embedding failed for model {model}: {exc}") from exc
+
     def embed(self, model: str, text: str) -> list[float]:
         payload = {"model": model, "input": text, "keep_alive": _EMBED_KEEP_ALIVE}
         try:
