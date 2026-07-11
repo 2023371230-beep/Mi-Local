@@ -55,6 +55,15 @@ def propose_plan(
     return _handle(service.propose_plan, session_id, request.goal)
 
 
+@router.post("/sessions/{session_id}/next", response_model=AgentSessionResponse)
+def propose_next_step(
+    session_id: str,
+    service: AgentService = Depends(get_agent_service),
+) -> AgentSessionResponse:
+    """Fase B: propone UN paso siguiente basado en la salida del ultimo paso (no ejecuta)."""
+    return _handle(service.propose_next_step, session_id)
+
+
 @router.post("/sessions/{session_id}/steps/{step_index}/propose", response_model=AgentSessionResponse)
 def propose_edit(
     session_id: str,

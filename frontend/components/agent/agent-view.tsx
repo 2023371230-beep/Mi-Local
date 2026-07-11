@@ -10,6 +10,7 @@ import {
   proposeAgentEdit,
   proposeAgentPlan,
   rejectAgentStep,
+  nextAgentStep,
   revertAgentStep,
 } from "@/lib/api/agent";
 import type { AgentSession, AgentStep } from "@/lib/types/agent";
@@ -70,7 +71,20 @@ export function AgentView() {
     onError: (error) => toast.error(errorMessage(error)),
   });
 
-  const busy = openSession.isPending || plan.isPending || stepAction.isPending;
+  const nextStep = useMutation({
+    mutationFn: () => {
+      if (!session) throw new Error("Sin sesion activa");
+      return nextAgentStep(session.session_id);
+    },
+    onSuccess: (data) => {
+      setSession(data);
+      toast.success("Paso siguiente propuesto. Revisalo y aprueba o rechaza.");
+    },
+    onError: (error) => toast.error(errorMessage(error)),
+  });
+
+  const busy = openSession.isPending || plan.isPending || stepAction.isPending || nextStep.isPending;
+  const hasExecutedStep = session?.steps.some((step) => ["executed", "failed", "applied"].includes(step.status)) ?? false;
 
   return (
     <div className={pageShell}>
@@ -124,6 +138,12 @@ export function AgentView() {
             {session.steps.map((step) => (
               <StepCard key={step.index} step={step} busy={busy} onAction={(action) => stepAction.mutate({ action, stepIndex: step.index })} />
             ))}
+            {hasExecutedStep ? (
+              <Button variant="outline" disabled={busy} onClick={() => nextStep.mutate()}>
+                <Play className="size-4" />
+                {nextStep.isPending ? "Analizando la salida del ultimo paso..." : "Proponer siguiente paso"}
+              </Button>
+            ) : null}
           </div>
         </CommandCard>
       ) : null}

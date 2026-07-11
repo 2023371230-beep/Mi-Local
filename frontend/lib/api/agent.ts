@@ -41,6 +41,13 @@ export function rejectAgentStep(sessionId: string, stepIndex: number) {
   });
 }
 
+export function nextAgentStep(sessionId: string) {
+  return apiFetch(`/agent/sessions/${sessionId}/next`, agentSessionSchema, {
+    method: "POST",
+    timeoutMs: 300_000,
+  });
+}
+
 export function revertAgentStep(sessionId: string, stepIndex: number) {
   return apiFetch(`/agent/sessions/${sessionId}/steps/${stepIndex}/revert`, agentSessionSchema, {
     method: "POST",

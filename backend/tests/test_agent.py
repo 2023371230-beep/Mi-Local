@@ -210,3 +210,49 @@ def test_agent_tree_excludes_ai_local(tmp_path: Path):
     session = service.create_session(str(workspace))
     assert "app.py" in session.tree
     assert all(".ai-local" not in item for item in session.tree)
+
+
+def test_agent_next_step_proposes_correction_after_failure(tmp_path: Path):
+    """Fase B: la salida de un comando fallido genera un paso de correccion pendiente."""
+    plan = '[{"kind": "command", "command": "pytest", "description": "Correr tests"}]'
+    next_step = '{"kind": "edit", "path": "main.py", "description": "Corregir el import roto"}'
+    service, workspace = make_service(tmp_path, [plan, next_step])
+    session = service.create_session(str(workspace))
+    service.propose_plan(session.session_id, "arreglar tests")
+
+    # Simular ejecucion fallida del comando (sin correr pytest real)
+    step = service.get_session(session.session_id).steps[0]
+    step.status = "failed"
+    step.error = "ImportError: no module named foo"
+
+    service.propose_next_step(session.session_id)
+    steps = service.get_session(session.session_id).steps
+    assert len(steps) == 2
+    assert steps[1].kind == "edit"
+    assert steps[1].status == "pending"  # requiere aprobacion, nada se ejecuto
+    assert not (workspace / "main.py").exists()
+
+
+def test_agent_next_step_requires_executed_step(tmp_path: Path):
+    plan = '[{"kind": "command", "command": "pytest", "description": "tests"}]'
+    service, workspace = make_service(tmp_path, [plan])
+    session = service.create_session(str(workspace))
+    service.propose_plan(session.session_id, "meta")
+    with pytest.raises(ValueError):
+        service.propose_next_step(session.session_id)
+
+
+def test_agent_plan_includes_key_file_context(tmp_path: Path):
+    """El plan lee archivos mencionados en el goal y manifiestos comunes."""
+    plan = '[{"kind": "edit", "path": "app.py", "description": "x"}]'
+    service, workspace = make_service(tmp_path, [plan])
+    (workspace / "README.md").write_text("proyecto de prueba", encoding="utf-8")
+    (workspace / "app.py").write_text("contenido_marcador_xyz", encoding="utf-8")
+    session = service.create_session(str(workspace))
+    service.propose_plan(session.session_id, "modifica app.py para agregar logging")
+
+    llm = service.llm_client
+    sent = llm.calls[0]["messages"][1]["content"]
+    assert "contenido_marcador_xyz" in sent
+    assert "proyecto de prueba" in sent
+    assert "no confiables" in sent
