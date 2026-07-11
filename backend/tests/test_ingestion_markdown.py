@@ -67,4 +67,6 @@ def test_ingest_infers_collection_from_folder(tmp_path: Path):
     stats = service.ingest(target_path=str(sub))
 
     assert stats.files_processed == 1
-    assert not 
+    assert not stats.errors
+    # la coleccion se infiere del nombre de la carpeta contenedora
+    assert vector.calls[0]["collection"] == "asistente"

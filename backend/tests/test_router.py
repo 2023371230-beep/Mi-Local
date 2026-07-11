@@ -33,3 +33,16 @@ def test_router_rag():
 
 def test_router_web():
     assert route("Busca en web lo ultimo de ciberseguridad 2026") == "skill_web_search"
+
+
+def test_router_innocent_logs_not_cyber():
+    """'logs de mi app' NO debe ir a ciberseguridad (patron antes sobre-ancho)."""
+    assert route("como veo los logs de mi app en Next") != "skill_ciberseguridad"
+
+
+def test_router_security_logs_go_cyber():
+    assert route("analiza estos logs de seguridad sospechosos") == "skill_ciberseguridad"
+
+
+def test_router_malware_goes_cyber():
+    assert route("que es un ataque de phishing") == "skill_ciberseguridad"

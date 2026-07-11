@@ -76,4 +76,56 @@ class ChatService:
         decision = self.router.route(request)
         effective_request = request.model_copy(update={"collection": request.collection or decision.collection})
         model_name = request.model or decision.model_name
-        skill = self._build_skill(decision.skill_name, model_name, decision.collection 
+        skill = self._build_skill(decision.skill_name, model_name, decision.collection or "general")
+        yield {"type": "meta", "skill": skill.name, "model": model_name, "reason": decision.reason}
+
+        if isinstance(skill, BaseSkill):
+            options: dict[str, Any] = {"temperature": 0.2, "num_ctx": 4096}
+            options.update(skill.chat_options)
+            answer_len = 0
+            for chunk in self.llm_client.chat_stream(
+                model_name, skill.build_messages(effective_request), options=options
+            ):
+                answer_len += len(chunk)
+                yield {"type": "delta", "data": chunk}
+            latency_ms = int((time.perf_counter() - started) * 1000)
+            logger.info(
+                "chat_stream skill={} model={} chars={} latency_ms={} reason={}",
+                skill.name, model_name, answer_len, latency_ms, decision.reason,
+            )
+            yield {"type": "done", "latency_ms": latency_ms, "rag_used": False, "web_used": False}
+            return
+
+        # RAG / web search: pipeline completo, respuesta de una pieza.
+        result = skill.run(effective_request)
+        if result.sources:
+            yield {"type": "sources", "data": result.sources}
+        yield {"type": "delta", "data": result.answer}
+        latency_ms = int((time.perf_counter() - started) * 1000)
+        logger.info(
+            "chat_stream skill={} model={} latency_ms={} reason={}",
+            result.skill_used, result.model_used, latency_ms, decision.reason,
+        )
+        yield {
+            "type": "done",
+            "latency_ms": latency_ms,
+            "rag_used": result.rag_used,
+            "web_used": result.web_used,
+            "web_engine": result.web_engine,
+            "web_fallback_used": result.web_fallback_used,
+        }
+
+    def _build_skill(self, skill_name: str, model_name: str, collection: str):
+        if skill_name == "skill_programacion":
+            return ProgramacionSkill(self.llm_client, model_name=model_name)
+        if skill_name == "skill_ui_ux":
+            return UiUxSkill(self.llm_client, model_name=model_name)
+        if skill_name == "skill_ciberseguridad":
+            return CiberseguridadSkill(self.llm_client, model_name=model_name)
+        if skill_name == "skill_bases_datos":
+            return BasesDatosSkill(self.llm_client, model_name=model_name)
+        if skill_name == "skill_rag_local":
+            return RagLocalSkill(self.rag_service, default_collection=collection)
+        if skill_name == "skill_web_search":
+            return WebSearchSkill(self.web_search_service, model_name=model_name)
+        return ChatGeneralSkill(self.llm_client, model_name=model_name)

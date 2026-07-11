@@ -37,3 +37,8 @@
 - `git init` + baseline (2026-07-10). `.gitignore` para venv/node_modules/chroma/logs/secretos.
 - Deps nuevas: motion (frontend); python-docx, reportlab, markdown (backend).
 - Tests: backend 34→55; Playwright 18→20 (+ test interactivo de menús).
+
+## 2026-07-11
+- Push inicial a origin/main COMPLETADO por el usuario (188 objetos). Bloqueo de credenciales RESUELTO.
+- Detectado: frontend es repo git anidado (gitlink) => el remote NO contiene el codigo frontend. Fix en TASK-0004 (conversion a monorepo).
+- .gitignore raiz: agregado .env.* / *.env.local (el patron *.env no cubria .env.local).

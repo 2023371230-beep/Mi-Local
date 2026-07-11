@@ -41,4 +41,11 @@ def create_app() -> FastAPI:
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(_, exc: Exception) -> JSONResponse:
         return JSONResponse(
-            s
+            status_code=500,
+            content={"error": "internal_server_error", "detail": str(exc)},
+        )
+
+    return app
+
+
+app = create_app()

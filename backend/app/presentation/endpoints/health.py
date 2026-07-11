@@ -52,4 +52,12 @@ def health(settings: Settings = Depends(get_app_settings)) -> HealthResponse:
             "engine": "vane",
             "primary": "vane",
             "url": settings.perplexica_url,
-            "providers_endpoint":
+            "providers_endpoint": providers_endpoint,
+            "search_endpoint": searxng_endpoint,
+            "fallback": "searxng",
+            "fallback_engine": "searxng",
+            "fallback_url": settings.searxng_url,
+            "fallback_available": searxng_endpoint,
+            "last_error": last_error,
+        },
+    )

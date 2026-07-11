@@ -43,3 +43,26 @@ cd ..\frontend ; npm run dev -- -p 3001
 - F6 router fino: parcial (patrones cyber afinados, regla de aclaración en skills; falta router LLM 2ª pasada)
 - Memoria .ai-local (backups/actions.log/state): ✅ COMPLETA
 - Documentación completa (README, ARCHITECTURE, reportes finales, QA_CHECKLIST): ✅ COMPLETA
+
+## Ciclo autopilot Cowork 2026-07-11
+
+- Git: 3 commits nuevos en main (estado autopilot, backend F1-F3+agente+documentos, gobierno).
+  Repo frontend anidado: 1 commit (streaming+composer+Motion+docs-generator).
+- Remote `origin` configurado: https://github.com/2023371230-beep/Mi-Local.git
+- **PUSH PENDIENTE** (bloqueo real: credenciales GitHub). Ejecutar desde PowerShell:
+  `cd "C:\Users\angel\Modelo local\modelo-ia-carrera"; git push -u origin main`
+- Codex: NO disponible en sandbox Cowork (npm 403). Cola y specs creadas:
+  CODEX_QUEUE.md, CODEX_WAIT_STATE.json, CODEX_TASKS/TASK-0001..0003.
+- Incidente: `git remote add` corrompio la vista FUSE de .git/config en el sandbox
+  (archivo en disco INTEGRO, reconstruido completo). Git funciona desde Windows;
+  desde este sandbox quedo inoperable el resto de la sesion.
+- Los archivos de gobierno nuevos (CODEX_*) quedan sin commitear: commitearlos desde
+  la sesion Code junto con TASK-0001.
+
+## Update 2026-07-11 (post-push)
+- Push a origin/main COMPLETADO (usuario). Bloqueo credenciales RESUELTO.
+- CRITICO detectado: frontend viajo como gitlink 160000 => GitHub main NO tiene el codigo
+  frontend. Fix especificado en CODEX_TASKS/TASK-0004.md (prioridad 1 de la cola).
+- .gitignore raiz parcheado: .env.* / *.env.local (antes .env.local NO estaba cubierto y
+  se habria subido al des-anidar el frontend).
+- No iniciar funciones grandes hasta cerrar TASK-0004 (regla del propietario).

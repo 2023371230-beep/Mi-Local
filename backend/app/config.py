@@ -44,4 +44,20 @@ class Settings(BaseSettings):
     vane_default_sources: str = Field(default="web", alias="VANE_DEFAULT_SOURCES")
     vane_search_timeout: float = Field(default=60.0, alias="VANE_SEARCH_TIMEOUT")
     web_search_fallback: str = Field(default="searxng", alias="WEB_SEARCH_FALLBACK")
-    agent_workspace_base: str = Field(default=r"C:\Users\angel
+    agent_workspace_base: str = Field(default=r"C:\Users\angel", alias="AGENT_WORKSPACE_BASE")
+    agent_max_plan_steps: int = Field(default=8, alias="AGENT_MAX_PLAN_STEPS")
+    documents_output_dir: Path = Field(default=BACKEND_ROOT / "outputs", alias="DOCUMENTS_OUTPUT_DIR")
+    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+
+    model_config = SettingsConfigDict(
+        env_file=str(ENV_FILE),
+        env_file_encoding="utf-8",
+        populate_by_name=True,
+        extra="ignore",
+    )
+
+
+@lru_cache
+def get_settings() -> Settings:
+    defaults = _load_yaml_defaults()
+    return Settings(**defaults)

@@ -22,4 +22,26 @@ class BaseSkill:
 
     # Regla comun a todas las skills: no adivinar cuando falta un dato critico.
     _CLARIFY_RULE = (
-        "\nSi la p
+        "\nSi la peticion es ambigua en un punto que cambia la respuesta (version, stack, objetivo), "
+        "haz UNA sola pregunta de aclaracion antes de responder; si puedes asumir lo mas comun, "
+        "asumelo y dilo explicitamente."
+    )
+
+    def build_messages(self, request: ChatRequest) -> list[dict[str, str]]:
+        system = self.system_prompt + self._CLARIFY_RULE
+        messages: list[dict[str, str]] = [{"role": "system", "content": system}]
+        for question, answer in self.few_shot:
+            messages.append({"role": "user", "content": question})
+            messages.append({"role": "assistant", "content": answer})
+        messages.append({"role": "user", "content": request.message})
+        return messages
+
+    def run(self, request: ChatRequest) -> SkillResult:
+        options: dict[str, float | int] = {"temperature": 0.2, "num_ctx": 4096}
+        options.update(self.chat_options)
+        answer = self.llm_client.chat(
+            self.default_model,
+            self.build_messages(request),
+            options=options,
+        )
+        return SkillResult(answer=answer, skill_used=self.name, model_used=self.default_model)

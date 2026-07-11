@@ -110,4 +110,32 @@ def main() -> int:
                         print(f"  primer token a los {time.perf_counter() - started:.1f}s")
                     answer_parts.append(str(event.get("data") or ""))
                 elif etype in ("done", "end"):
-                   
+                    break
+                elif etype == "error":
+                    print(f"ERROR en stream: {event.get('data')}")
+                    return 1
+    except httpx.TimeoutException:
+        print(f"ERROR: timeout tras {TIMEOUT}s.")
+        print("Causa probable: Ollama lento (carga de modelo) o cola ocupada (OLLAMA_NUM_PARALLEL=1).")
+        print("Revisar: curl http://localhost:11434/api/ps ; docker logs vane --tail 50")
+        return 1
+    except httpx.HTTPError as exc:
+        print(f"ERROR: {exc}")
+        return 1
+
+    elapsed = time.perf_counter() - started
+    print(f"tiempo total={elapsed:.1f}s")
+    answer = "".join(answer_parts)
+    if not sources:
+        print("AVISO: Vane no emitio sources -> su SearXNG interno dio 0 resultados;")
+        print("la respuesta puede ser alucinada. El backend la descarta y usa el fallback SearXNG.")
+    print(f"\nANSWER ({len(answer)} chars):\n{answer[:1200]}")
+    print(f"\nSOURCES ({len(sources)}):")
+    for src in sources[:5]:
+        meta = src.get("metadata", {}) or {}
+        print(f"  - {meta.get('title', '?')} | {meta.get('url', '?')}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

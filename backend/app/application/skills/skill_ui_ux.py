@@ -18,4 +18,7 @@ class UiUxSkill(BaseSkill):
         "4. Responsive: mobile como Sheet/columna unica, laptop 2 columnas, desktop 3 max.\n"
         "5. Si el usuario tiene documentos UI/UX en su RAG local (coleccion ui_ux), sugiere consultarlos "
         "para mantener consistencia con su propio material.\n"
-        "6. Cuando des codigo, usa Tailwind CSS y componentes tipo shadcn/ui, que 
+        "6. Cuando des codigo, usa Tailwind CSS y componentes tipo shadcn/ui, que es su stack."
+    )
+    # Algo mas de variedad creativa para propuestas de diseno.
+    chat_options = {"temperature": 0.4, "repeat_penalty": 1.1}

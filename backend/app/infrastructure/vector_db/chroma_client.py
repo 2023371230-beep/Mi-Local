@@ -94,4 +94,21 @@ class ChromaVectorClient(VectorDB):
             n_results=top_k,
             where=where,
             include=["documents", "metadatas", "distances"],
-      
+        )
+
+        items: list[dict[str, Any]] = []
+        ids = results.get("ids", [[]])[0]
+        documents = results.get("documents", [[]])[0]
+        metadatas = results.get("metadatas", [[]])[0]
+        distances = results.get("distances", [[]])[0]
+
+        for item_id, document, metadata, distance in zip(ids, documents, metadatas, distances):
+            items.append(
+                {
+                    "id": item_id,
+                    "document": document,
+                    "metadata": metadata or {},
+                    "distance": float(distance),
+                }
+            )
+        return items

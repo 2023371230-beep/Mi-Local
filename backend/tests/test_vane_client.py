@@ -143,4 +143,10 @@ def test_vane_search_returns_error_on_timeout(monkeypatch):
                 ]
             }
 
-    monkeypatch.setattr(ht
+    monkeypatch.setattr(httpx, "get", lambda *_, **__: FakeGetResponse())
+    monkeypatch.setattr(httpx, "stream", lambda *_, **__: (_ for _ in ()).throw(httpx.TimeoutException("timeout")))
+
+    result = PerplexicaClient("http://localhost:3000", timeout=1).search("query")
+
+    assert result["answer"] == ""
+    assert "timed out" in result["error"]

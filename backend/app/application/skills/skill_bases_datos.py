@@ -18,4 +18,7 @@ class BasesDatosSkill(BaseSkill):
         "4. Seguridad: parametriza siempre (nunca concatenar SQL), least privilege, roles y row level "
         "security cuando aplique.\n"
         "5. Migraciones y triggers: incluye rollback y advierte bloqueos en tablas grandes.\n"
-        "6. Si la sintaxis difiere entre PostgreSQL y MySQL, muestra ambas o aclar
+        "6. Si la sintaxis difiere entre PostgreSQL y MySQL, muestra ambas o aclara cual usas."
+    )
+    # SQL exige exactitud; contexto amplio para esquemas largos.
+    chat_options = {"temperature": 0.15, "num_ctx": 8192, "repeat_penalty": 1.1}

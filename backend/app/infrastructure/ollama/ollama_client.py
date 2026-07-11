@@ -67,3 +67,39 @@ class OllamaClient(LLMClient):
         }
         if options:
             payload["options"] = options
+        try:
+            with httpx.stream(
+                "POST", f"{self.base_url}/api/chat", json=payload, timeout=self.timeout
+            ) as response:
+                response.raise_for_status()
+                for line in response.iter_lines():
+                    if not line:
+                        continue
+                    try:
+                        event = json.loads(line)
+                    except ValueError:
+                        continue
+                    chunk = event.get("message", {}).get("content", "")
+                    if chunk:
+                        yield chunk
+                    if event.get("done"):
+                        break
+        except httpx.HTTPError as exc:
+            raise RuntimeError(f"Ollama chat stream failed for model {model}: {exc}") from exc
+
+    def embed(self, model: str, text: str) -> list[float]:
+        payload = {"model": model, "input": text, "keep_alive": _EMBED_KEEP_ALIVE}
+        try:
+            response = httpx.post(
+                f"{self.base_url}/api/embed",
+                json=payload,
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+            data = response.json()
+            embeddings = data.get("embeddings") or []
+            if embeddings and isinstance(embeddings[0], list):
+                return embeddings[0]
+            return data.get("embedding", [])
+        except httpx.HTTPError as exc:
+            raise RuntimeError(f"Ollama embedding failed for model {model}: {exc}") from exc

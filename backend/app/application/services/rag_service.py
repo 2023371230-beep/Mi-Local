@@ -48,4 +48,21 @@ class RagService:
                     "path": metadata.get("path"),
                     "filename": metadata.get("filename"),
                     "page": metadata.get("page"),
-                    "chunk_
+                    "chunk_index": metadata.get("chunk_index"),
+                    "score": item.get("distance"),
+                }
+            )
+
+        prompt = (
+            "Responde usando solo el contexto local. Si el contexto no alcanza, dilo claramente.\n\n"
+            f"Pregunta: {message}\n\nContexto:\n" + "\n\n".join(context_blocks)
+        )
+        answer = self.llm_client.chat(
+            self.settings.ollama_general_model,
+            [
+                {"role": "system", "content": "Eres un asistente tecnico de RAG local. Cita filename, pagina y chunk cuando uses una fuente."},
+                {"role": "user", "content": prompt},
+            ],
+            options={"temperature": 0.1, "num_ctx": 8192},
+        )
+        return answer, sources

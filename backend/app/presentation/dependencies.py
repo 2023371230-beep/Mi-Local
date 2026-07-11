@@ -80,4 +80,24 @@ def get_web_search_service(settings: Settings = Depends(get_app_settings)) -> We
 def get_agent_service(settings: Settings = Depends(get_app_settings)) -> AgentService:
     return AgentService(
         settings=settings,
-        llm_client=OllamaClient(settings.ollama_base_url, 
+        llm_client=OllamaClient(settings.ollama_base_url, timeout=settings.ollama_timeout),
+    )
+
+
+def get_document_service(settings: Settings = Depends(get_app_settings)) -> DocumentService:
+    llm_client = OllamaClient(settings.ollama_base_url, timeout=settings.ollama_timeout)
+    rag_service = RagService(settings, llm_client, ChromaVectorClient(settings.chroma_path))
+    return DocumentService(settings=settings, llm_client=llm_client, rag_service=rag_service)
+
+
+def get_chat_service(settings: Settings = Depends(get_app_settings)) -> ChatService:
+    llm_client = OllamaClient(settings.ollama_base_url, timeout=settings.ollama_timeout)
+    vector_client = ChromaVectorClient(settings.chroma_path)
+    rag_service = RagService(settings, llm_client, vector_client)
+    web_search_service = WebSearchService(
+        settings=settings,
+        llm_client=llm_client,
+        perplexica_client=_build_perplexica_client(settings),
+        searxng_client=SearxngClient(settings.searxng_url),
+    )
+    return ChatService(settings, llm_client, rag_service, web_search_service)

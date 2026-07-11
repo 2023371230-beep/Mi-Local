@@ -99,4 +99,9 @@ DATABASE_PATTERNS = [
 
 def matches_any(message: str, patterns: list[str]) -> bool:
     normalized = _normalize(message)
-    return any(re.search(pattern, normalized, flags=re.IGNORECASE) for patter
+    return any(re.search(pattern, normalized, flags=re.IGNORECASE) for pattern in patterns)
+
+
+def _normalize(message: str) -> str:
+    replacements = str.maketrans("áéíóúüñÁÉÍÓÚÜÑ", "aeiouunAEIOUUN")
+    return message.translate(replacements).lower()

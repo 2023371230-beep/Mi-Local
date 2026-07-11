@@ -237,4 +237,64 @@ class PerplexicaClient:
             embedding_model,
             effective_timeout,
         )
-        started = time.perf
+        started = time.perf_counter()
+        try:
+            data = self._post_search(payload, effective_timeout)
+        except httpx.TimeoutException:
+            return self._error(f"Vane search timed out after {effective_timeout} seconds.")
+        except httpx.HTTPError as exc:
+            return self._error(f"Vane search failed: {exc}")
+        if data.get("error"):
+            return self._error(f"Vane search failed: {data['error']}")
+        if data.get("no_sources"):
+            return self._error(
+                "Vane no encontro fuentes (su SearXNG interno dio 0 resultados); se aborto la sintesis."
+            )
+
+        elapsed = time.perf_counter() - started
+        logger.info("Vane search ok in {:.1f}s", elapsed)
+        PerplexicaClient.last_error = None
+        return self.normalize_response(data, provider)
+
+    def normalize_response(self, data: dict[str, Any], provider: dict[str, Any] | None = None) -> dict[str, Any]:
+        provider = provider or {}
+        return {
+            "answer": data.get("message") or data.get("answer") or "",
+            "sources": self._normalize_sources(data.get("sources", [])),
+            "provider": provider.get("name", "ollama"),
+            "engine": "vane",
+            "error": None,
+            "raw": data,
+        }
+
+    # ----------------------------------------------------------------- helpers
+
+    def _normalize_sources(self, sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        normalized = []
+        for source in sources or []:
+            metadata = source.get("metadata", {}) or {}
+            normalized.append(
+                {
+                    "source": "perplexica",
+                    "title": metadata.get("title") or "",
+                    "url": metadata.get("url"),
+                    "content": source.get("content") or "",
+                }
+            )
+        return normalized
+
+    def _model_keys(self, models: list[dict[str, Any]]) -> list[str]:
+        return [model.get("key") for model in models or [] if model.get("key")]
+
+    def _pick_model(self, models: list[dict[str, Any]], preferred: list[str]) -> str | None:
+        keys = self._model_keys(models)
+        for item in preferred:
+            for key in keys:
+                if item == key or item in key:
+                    return key
+        return keys[0] if keys else None
+
+    def _error(self, message: str) -> dict[str, Any]:
+        PerplexicaClient.last_error = message
+        logger.warning(message)
+        return {"answer": "", "sources": [], "provider": "ollama", "engine": "vane", "error": message, "raw": {}}

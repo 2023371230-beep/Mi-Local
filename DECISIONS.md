@@ -26,3 +26,14 @@ Formato: fecha — decisión — por qué — alternativa descartada.
   cubre lo común y llama3.2 a 98 tok/s hará viable la 2ª pasada — router LLM para todo (latencia).
 - 2026-07-10 — **git init con baseline previo a F1** — red de seguridad ante el bug de truncado
   de Cowork y las escrituras del agente — seguir sin control de versiones.
+
+## 2026-07-11 (autopilot Cowork)
+- D: Commits/push autoaprobados segun prompt maestro seccion 1.11-1.12; push bloqueado solo
+  por credenciales. Remote unico `origin` (no existia otro; regla 4 no aplico).
+- D: Codex indisponible en Cowork => protocolo seccion 4: cola persistente + specs
+  (TASK-0001 ingesta pesada, TASK-0002 agente fase B, TASK-0003 router fino). La sesion
+  Code es el ejecutor de Codex.
+- D: refman MySQL no se ingiere completo (90% ruido); solo capitulos utiles. Un solo
+  refman 8.4 (hay duplicado descargado).
+- D: git desde sandbox Cowork queda vetado tras corrupcion de vista FUSE en .git/config;
+  operaciones git futuras de Cowork se delegan a la sesion Code/usuario.

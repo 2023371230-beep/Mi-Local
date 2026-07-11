@@ -130,4 +130,23 @@ class IngestionService:
 
     def _iter_pages(self, file: Path):
         """Genera (numero_pagina, texto) para PDF, Markdown o texto plano."""
-  
+        if file.suffix.lower() == ".pdf":
+            for page in self.pdf_parser.extract_pages(file):
+                yield page.page, page.text
+            return
+        text = file.read_text(encoding="utf-8", errors="replace")
+        yield 1, text
+
+    def _infer_collection(self, file: Path, root: Path) -> str:
+        try:
+            relative = file.relative_to(root)
+            key = relative.parts[0].lower()
+        except ValueError:
+            key = file.parent.name.lower()
+        return TOPIC_COLLECTION_MAP.get(key, self._sanitize_collection(key))
+
+    def _sanitize_collection(self, value: str) -> str:
+        safe = "".join(char.lower() if char.isalnum() else "_" for char in value)
+        while "__" in safe:
+            safe = safe.replace("__", "_")
+        return safe.strip("_") or "general"
