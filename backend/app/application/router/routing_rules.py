@@ -48,10 +48,13 @@ PROGRAMMING_PATTERNS = [
     r"\bphp\b",
     r"\bflutter\b",
     r"\bsql\b",
-    r"\berror\b",
     r"\bcodigo\b",
     r"\bscript\b",
-    r"\bapi\b",
+    # "error"/"api" solos eran sobre-anchos; ahora exigen contexto de codigo.
+    r"error (?:en|de) (?:mi )?(?:codigo|funcion|script|endpoint|test|app)",
+    r"\bapi rest\b",
+    r"\bendpoint\b",
+    r"\btraceback\b",
 ]
 
 UI_UX_PATTERNS = [
@@ -89,11 +92,13 @@ DATABASE_PATTERNS = [
     r"postgresql",
     r"mysql",
     r"base de datos",
-    r"\bquery\b",
-    r"indice",
+    # "query"/"indice" solos capturaban Chroma/arrays; exigir contexto SQL/tabla.
+    r"query sql",
+    r"consulta sql",
+    r"indice.{0,24}(?:tabla|sql|postgres|mysql|columna)",
     r"normalizacion",
-    r"trigger",
-    r"schema",
+    r"\btrigger\b",
+    r"\bschema\b",
 ]
 
 

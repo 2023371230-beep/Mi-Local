@@ -31,7 +31,12 @@ class ChatService:
         web_search_service: WebSearchService,
     ) -> None:
         self.settings = settings
-        self.router = QueryRouter(settings)
+        # Router con 2a pasada LLM de timeout corto propio: jamas bloquear el chat.
+        from app.infrastructure.ollama.ollama_client import OllamaClient
+
+        self.router = QueryRouter(
+            settings, router_llm=OllamaClient(settings.ollama_base_url, timeout=5.0)
+        )
         self.llm_client = llm_client
         self.rag_service = rag_service
         self.web_search_service = web_search_service
@@ -88,12 +93,19 @@ class ChatService:
             ):
                 answer_len += len(chunk)
                 yield {"type": "delta", "data": chunk}
+            if skill.last_rag_sources:
+                yield {"type": "sources", "data": skill.last_rag_sources}
             latency_ms = int((time.perf_counter() - started) * 1000)
             logger.info(
                 "chat_stream skill={} model={} chars={} latency_ms={} reason={}",
                 skill.name, model_name, answer_len, latency_ms, decision.reason,
             )
-            yield {"type": "done", "latency_ms": latency_ms, "rag_used": False, "web_used": False}
+            yield {
+                "type": "done",
+                "latency_ms": latency_ms,
+                "rag_used": bool(skill.last_rag_sources),
+                "web_used": False,
+            }
             return
 
         # RAG / web search: pipeline completo, respuesta de una pieza.
@@ -117,13 +129,25 @@ class ChatService:
 
     def _build_skill(self, skill_name: str, model_name: str, collection: str):
         if skill_name == "skill_programacion":
-            return ProgramacionSkill(self.llm_client, model_name=model_name)
+            return ProgramacionSkill(
+                self.llm_client, model_name=model_name,
+                rag_service=self.rag_service, rag_collection="programacion",
+            )
         if skill_name == "skill_ui_ux":
-            return UiUxSkill(self.llm_client, model_name=model_name)
+            return UiUxSkill(
+                self.llm_client, model_name=model_name,
+                rag_service=self.rag_service, rag_collection="ui_ux",
+            )
         if skill_name == "skill_ciberseguridad":
-            return CiberseguridadSkill(self.llm_client, model_name=model_name)
+            return CiberseguridadSkill(
+                self.llm_client, model_name=model_name,
+                rag_service=self.rag_service, rag_collection="ciberseguridad",
+            )
         if skill_name == "skill_bases_datos":
-            return BasesDatosSkill(self.llm_client, model_name=model_name)
+            return BasesDatosSkill(
+                self.llm_client, model_name=model_name,
+                rag_service=self.rag_service, rag_collection="bases_datos",
+            )
         if skill_name == "skill_rag_local":
             return RagLocalSkill(self.rag_service, default_collection=collection)
         if skill_name == "skill_web_search":

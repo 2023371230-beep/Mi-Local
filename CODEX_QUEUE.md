@@ -8,7 +8,7 @@ pendiente, actualiza estado aqui y en CODEX_WAIT_STATE.json.
 | TASK-0004 | URGENTE: frontend gitlink -> carpeta del monorepo + push | DONE 2026-07-11 (sesion Code) | CODEX_TASKS/TASK-0004.md |
 | TASK-0001 | Ingesta por lotes de PDFs pesados con split por capitulos | in_progress (sesion Code) | CODEX_TASKS/TASK-0001.md |
 | TASK-0002 | Agente PRO fase B: bucle iterativo con lectura de archivos | DONE 2026-07-11 (sesion Code) | CODEX_TASKS/TASK-0002.md |
-| TASK-0003 | Router fino (F6) + RAG contextual en skills tematicas | pending | CODEX_TASKS/TASK-0003.md |
+| TASK-0003 | Router fino (F6) + RAG contextual en skills tematicas | DONE 2026-07-11 (sesion Code) | CODEX_TASKS/TASK-0003.md |
 
 ## Pendiente de la sesion Cowork (no requiere Codex)
 - [x] `git push -u origin main` — RESUELTO 2026-07-11 por el usuario (188 objetos en origin/main).
