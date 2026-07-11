@@ -20,6 +20,8 @@ backend/outputs/
 # Secretos
 .env
 *.env
+.env.*
+*.env.local
 !.env.example
 *.pem
 *.key
@@ -28,3 +30,5 @@ backend/outputs/
 Thumbs.db
 Desktop.ini
 .ai-local/
+frontend/.git-backup-nested/
+*.bundle
